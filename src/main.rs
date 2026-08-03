@@ -1,8 +1,8 @@
+use Safeexec::cli::{Args, TheaterMode};
+use Safeexec::error::Result;
+use Safeexec::runtime::RuntimeOrchestrator;
 use clap::Parser;
 use nix::libc;
-use safeexec::cli::{Args, TheaterMode};
-use safeexec::error::Result;
-use safeexec::runtime::RuntimeOrchestrator;
 
 fn main() -> Result<()> {
     let args = Args::parse();
