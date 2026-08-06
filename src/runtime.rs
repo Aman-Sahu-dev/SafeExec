@@ -1,5 +1,3 @@
-use std::fmt::Result;
-
 use crate::cli::Args;
 use crate::error::Result;
 
