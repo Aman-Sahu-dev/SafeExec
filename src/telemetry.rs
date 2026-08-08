@@ -1,4 +1,3 @@
-use crate::error::Result;
 use serde::{Deserialize, Serialize};
 use std::{fmt::Result, time::SystemTime};
 
@@ -31,7 +30,7 @@ pub enum TelemetryEvent {
         tasks: u64,
     },
     ProcessExited {
-        code: Option<i23>,
+        code: Option<i32>,
         signal: Option<i32>,
     },
     CleanupCompleted,
