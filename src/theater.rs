@@ -42,7 +42,7 @@ impl TheatrerEngine {
                 Some(format!(
                     "🛡️ [CGROUP]    The memory cage is locked: {} maximum. Fork-bomb fuse: {} threads.",
                     mem.get_appropriate_unit(false),
-                    pids_max
+                    pid_max
                 ))
             }
             NamespaceCreated { flags } => Some(format!(
