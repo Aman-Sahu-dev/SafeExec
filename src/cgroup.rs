@@ -1,9 +1,6 @@
 use crate::error::{Result, SafeExecError};
 use nix::unistd::Pid;
-use std::{
-    fmt::Result,
-    path::{Path, PathBuf},
-};
+use std::path::{Path, PathBuf};
 
 pub struct CgrpupV2Manager {
     cgroup_path: PathBuf,

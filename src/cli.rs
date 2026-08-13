@@ -6,38 +6,38 @@ use std::{default, path::PathBuf};
 #[command(about = "A lighweight linux container runtime and sandbox")]
 
 pub struct Args {
-    #[arg(long, short = 'e')]
-    pub exec: PathBuf,
+    #[ARG(LONG, SHORT = 'E')]
+    PUB EXEC: PATHBUF,
 
-    #[arg(long,short = 'a',nums_args = 0..)]
-    pub args: Vec<String>,
+    #[ARG(LONG,SHORT = 'A',NUMS_ARGS = 0..)]
+    PUB ARGS: VEC<STRING>,
 
-    #[arg(long, default_value = "64MB")]
-    pub max_memory: String,
+    #[ARG(LONG, DEFAULT_VALUE = "64MB")]
+    PUB MAX_MEMORY: STRING,
 
-    #[arg(long, default_value = "20")]
-    pub max_pids: u64,
+    #[ARG(LONG, DEFAULT_VALUE = "20")]
+    PUB MAX_PIDS: U64,
 
-    #[arg(long)]
-    pub cpu_max: Option<String>,
+    #[ARG(LONG)]
+    PUB CPU_MAX: OPTION<STRING>,
 
-    #[arg(long, short = 't', default_value)]
-    pub timeout: String,
+    #[ARG(LONG, SHORT = 'T', DEFAULT_VALUE)]
+    PUB TIMEOUT: STRING,
 
-    #[arg(long, short = 'i')]
-    pub input: Option<PathBuf>,
+    #[ARG(LONG, SHORT = 'I')]
+    PUB INPUT: OPTION<PATHBUF>,
 
-    #[arg(long, short = 'o')]
-    pub output: Option<PathBuf>,
+    #[ARG(LONG, SHORT = 'O')]
+    PUB OUTPUT: OPTION<PATHBUF>,
 
-    #[arg(long, ValueEnum, default_value = "narretive")]
-    pub theatermode: TheaterMode,
+    #[ARG(LONG, VALUEENUM, DEFAULT_VALUE = "NARRETIVE")]
+    PUB THEATERMODE: THEATERMODE,
 
-    #[arg(long)]
-    pub quite_telemtry: bool,
+    #[ARG(LONG)]
+    PUB QUITE_TELEMTRY: BOOL,
 
-    #[arg(long)]
-    pub session_id: Option<String>,
+    #[ARG(LONG)]
+    PUB SESSION_ID: OPTION<STRING>,
 }
 
 #[derive(Debug, Clone, Copy, ValueEnum)]
