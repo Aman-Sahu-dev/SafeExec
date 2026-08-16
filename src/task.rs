@@ -29,7 +29,7 @@ impl<'a> TaskLauncher<'a> {
         let flags = NamespaceController::build_clone_flags();
         let mut stack = allocate_clone_stack(1024 * 1024); // 1 MiB stack
 
-        let sync = SyncBarrier::new()?;
+        let sync = SyncBarrier::new();
 
         let binary = CString::new(self.binary.as_os_str().as_encoded_bytes())
             .map_err(|_| SafeExecError::InvalidArgument("binary path contains null".into()))?;
