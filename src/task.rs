@@ -1,3 +1,4 @@
+use crate::cgroup::CgroupV2Manager;
 use crate::error::{Result, SafeExecError};
 use crate::namespace::{ChildContext, NamespaceController, allocate_clone_stack};
 use crate::sync_primitives::SyncBarrier;
@@ -12,6 +13,7 @@ pub struct TaskLauncher<'a> {
     pub args: &'a [String],
     pub timeout: Duration,
     pub hostname: String,
+    pub cgroup: Option<&'a CgroupV2Manager>,
 }
 
 impl<'a> TaskLauncher<'a> {
@@ -21,15 +23,20 @@ impl<'a> TaskLauncher<'a> {
             args,
             timeout,
             hostname,
+            cgroup: None,
         }
     }
 
-    /// Phase 2 testable entry point: clone into namespaces and exec.
+    pub fn with_cgroup(mut self, cg: &'a CgroupV2Manager) -> Self {
+        self.cgroup = Some(cg);
+        self
+    }
+
     pub fn run(&self) -> Result<i32> {
         let flags = NamespaceController::build_clone_flags();
-        let mut stack = allocate_clone_stack(1024 * 1024); // 1 MiB stack
+        let mut stack = allocate_clone_stack(1024 * 1024);
 
-        let sync = SyncBarrier::new();
+        let sync = SyncBarrier::new()?;
 
         let binary = CString::new(self.binary.as_os_str().as_encoded_bytes())
             .map_err(|_| SafeExecError::InvalidArgument("binary path contains null".into()))?;
@@ -42,7 +49,6 @@ impl<'a> TaskLauncher<'a> {
             )
             .collect();
 
-        // Inherit current environment.
         let envp: Vec<CString> = std::env::vars()
             .map(|(k, v)| CString::new(format!("{}={}", k, v)).unwrap())
             .collect();
@@ -56,25 +62,19 @@ impl<'a> TaskLauncher<'a> {
         };
 
         let ns = NamespaceController::new();
-
-        // Close child descriptors in parent before clone.
         ctx.sync.close_child_descriptors_in_parent()?;
 
         let child_pid = unsafe { ns.spawn_container_init(flags, &mut stack, ctx)? };
 
-        // Parent path:
-        // 1. Wait for child to be ready.
         ctx.sync.wait_for_child_ready()?;
+        ns.write_uid_gid_map(child_pid, getuid().as_raw(), getgid().as_raw())?;
 
-        // 2. Write UID/GID maps.
-        let host_uid = getuid().as_raw();
-        let host_gid = getgid().as_raw();
-        ns.write_uid_gid_map(child_pid, host_uid, host_gid)?;
+        if let Some(cg) = self.cgroup {
+            cg.attach_pid(child_pid)?;
+        }
 
-        // 3. Signal child to continue.
         ctx.sync.signal_continue()?;
 
-        // 4. Wait for child exit.
         let status = waitpid(child_pid, None).map_err(SafeExecError::Syscall)?;
 
         match status {
