@@ -57,3 +57,14 @@ pub struct ParentBarrier {
     c2p_read: OwnedFd,
     p2c_write: OwnedFd,
 }
+impl ParentBarrier {
+    pub fn wait_for_child_ready(self) -> Result<()> {
+        let mut buf = [0u8; 1];
+        let _ = read(self.c2p_read, &mut buf);
+        Ok(())
+    }
+    pub fn sigal_continue(self) -> Result<()> {
+        let _ = write(self.p2c_write, &[1])?;
+        Ok(())
+    }
+}
