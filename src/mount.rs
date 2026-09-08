@@ -1,29 +1,33 @@
 use crate::error::{Result, SafeExecError};
-use std::path::Path;
+use nix::mount::{MntFlags, MsFlags, mount, umount2};
+use nix::unistd::chdir;
+use std::path::Component::Prefix;
+use std::path::{Path, PathBuf};
+use tempfile::TempDir;
+
 pub struct VfsManager;
 
 impl VfsManager {
     pub fn new() -> Self {
         Self
     }
-
-    pub fn allocate_workspace(&self, _session_id: &str) -> Result<tempfile::TempDir> {
-        // TODO(Phase 4): Create /tmp/safeexec_<id> via tempfile
-        todo!("VfsManager::allocate_workspace() — implement in Phase 4")
+    pub fn allocate_wokspace(&self, session_id: &str) -> Result<tempfile::TempDir> {
+        let dir = tempfile::Builder::new()
+            .prefix(&format!("safeexec {}", session_id))
+            .tempdir()
+            .map_err(|e| SafeExecError::Mount(format!("failed to create worksapce {}", e)))?;
+        Ok(dir)
     }
+    pub fn setup_minimal_root(&self, root: &Path) -> Result<()> {
+        let dirs = &[
+            "bin", "dev", "etc", "lib", "proc", "sys", "lib64", "tmp", "usr", "in", "out",
+        ];
+        for subdir in dirs {
+            let path = root.join(subdir);
+            std::fs::create_dir_all(&path).map_err(|e| {
+                SafeExecError::Mount(format!("failed to mkdir {}: {}", path.display(), e))
+            })?;
+        }
 
-    pub fn bind_mount_input(&self, _src: &Path, _dst: &Path) -> Result<()> {
-        // TODO(Phase 4): MS_RDONLY bind mount
-        todo!("VfsManager::bind_mount_input() — implement in Phase 4")
-    }
 
-    pub fn bind_mount_output(&self, _src: &Path, _dst: &Path) -> Result<()> {
-        // TODO(Phase 4): read-write bind mount
-        todo!("VfsManager::bind_mount_output() — implement in Phase 4")
-    }
-
-    pub fn pivot_root_into(&self, _new_root: &Path) -> Result<()> {
-        // TODO(Phase 4): Full pivot_root sequence
-        todo!("VfsManager::pivot_root_into() — implement in Phase 4")
-    }
 }

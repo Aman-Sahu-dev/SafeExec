@@ -7,7 +7,7 @@ edition = "2024"
 byte-unit = "5.2.5"
 clap = { version = "4.6.5", features = ["derive"] }
 nanoid = "0.5.0"
-nix = { version = "0.31.3", features = ["process", "sched", "mount", "user", "signal"] }
+nix = { version = "0.31.3", features = ["process", "sched", "mount", "user", "signal", "fs"] }
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.151"
 tempfile = "3.27.0"
