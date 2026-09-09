@@ -1,6 +1,8 @@
 use crate::error::{Result, SafeExecError};
 use nix::mount::{MntFlags, MsFlags, mount, umount2};
 use nix::unistd::chdir;
+use std::fmt::Result;
+use std::os::unix::fs::PermissionsExt;
 use std::path::Component::Prefix;
 use std::path::{Path, PathBuf};
 use tempfile::TempDir;
@@ -29,5 +31,34 @@ impl VfsManager {
             })?;
         }
 
+        let tmp = root.join("tmp");
+        std::fs::set_permissions(&tmp, std::fs::Permissions::from_mode(0o777)).ok();
+        self.bind_mount_ro(Path::new("/bin"), &root.join("bin"))?;
+        self.bind_mount_ro(Path::new("/lib"), &root.join("lib"))?;
+        if Path::new("/lib64").exists() {
+            self.bind_mount_ro(Path::new("/lib64"), &root.join("lib64"))?;
+        }
+        self.bind_mount_ro(Path::new("/usr"), &root.join("usr"))?;
+        self.bind_mount_ro(Path::new("/dev"), &root.join("dev"))?;
 
+        Ok(())
+    }
+    pub fn bind_mount_ro(&self, src: &Path, dst: &Path) -> Result<()> {
+        std::fs::create_dir_all(dst).ok();
+        self.bind_mount_ro(src, dst)
+    }
+    pub fn pivot_root_into(&self, new_root: &Path) -> Result<()>{
+        let put_old = new_root.join(".old_root");
+        std::fs::create_dir_all(&put_old).map_err(|e| {
+            SafeExecError::Mount(fromat!("failed to create put_old: {}"),e)
+        })?;
+
+        mount(
+            Some(new_root),
+            new_root,
+            None::<&str>,
+            MsFlags::MS_BIND | MsFlags::MS_REC,
+            None<&str>,
+            ).map_err(|e| SafeExecError::Mount(format!("self-bind-mount failed: {}"),e))?;
+    }
 }
