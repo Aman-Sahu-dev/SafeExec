@@ -1,4 +1,5 @@
 use crate::error::{Result, SafeExecError};
+use nix::libc::{SYS_rmdir, rmdir};
 use nix::mount::{MntFlags, MsFlags, mount, umount2};
 use nix::unistd::chdir;
 use std::fmt::Result;
@@ -13,7 +14,7 @@ impl VfsManager {
     pub fn new() -> Self {
         Self
     }
-    pub fn allocate_wokspace(&self, session_id: &str) -> Result<tempfile::TempDir> {
+    pub fn allocate_wokspace(&self,on_id: &str) -> Result<tempfile::TempDir> {
         let dir = tempfile::Builder::new()
             .prefix(&format!("safeexec {}", session_id))
             .tempdir()
@@ -43,10 +44,15 @@ impl VfsManager {
 
         Ok(())
     }
-    pub fn bind_mount_ro(&self, src: &Path, dst: &Path) -> Result<()> {
+    pub fn bind_mount_into(&self, src: &Path, dst: &Path) -> Result<()> {
         std::fs::create_dir_all(dst).ok();
         self.bind_mount_ro(src, dst)
     }
+    
+    pub fn bind_mount_output(&self,src: &Path,dst: &Path) -> Result<()>{
+        std::fs::create_dir_all(dst).ok();
+        self.bind_mount_rw(src,dst)
+    } 
     pub fn pivot_root_into(&self, new_root: &Path) -> Result<()>{
         let put_old = new_root.join(".old_root");
         std::fs::create_dir_all(&put_old).map_err(|e| {
@@ -60,5 +66,16 @@ impl VfsManager {
             MsFlags::MS_BIND | MsFlags::MS_REC,
             None<&str>,
             ).map_err(|e| SafeExecError::Mount(format!("self-bind-mount failed: {}"),e))?;
+        Mount(
+            None::<&str>,
+            Path::new("/"),
+            None::<&str>,
+            MsFlags::MS_PRIVATE | MsFlags::MS_REC,
+            None<&str>,
+            ).map_err(|e| SafeExecError::Mount(format!("make private failed: {}"),e))?;
+        chdir("/").map_err(SafeExecError::Mount(format!("chdir / failed : {}",e)))?;
+        umount2(".old_root", MntFlags::MNT_DETACH).map_err(SafeExecError::Mount(format!("umount2 failed: {}",e))?;
+        std::fs::remove_dir(".old_root").map_err(SafeExecError::Mount(format!("remove_dir failed: {}",e)))?;
+        Ok(())
     }
 }
