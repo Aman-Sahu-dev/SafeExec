@@ -1,11 +1,10 @@
 use crate::error::{Result, SafeExecError};
-use nix::libc::{SYS_rmdir, rmdir};
 use nix::mount::{MntFlags, MsFlags, mount, umount2};
 use nix::unistd::chdir;
 use std::fmt::Result;
 use std::os::unix::fs::PermissionsExt;
 use std::path::Component::Prefix;
-use std::path::{Path, PathBuf};
+use std::path::{self, Path, PathBuf};
 use tempfile::TempDir;
 
 pub struct VfsManager;
@@ -14,7 +13,7 @@ impl VfsManager {
     pub fn new() -> Self {
         Self
     }
-    pub fn allocate_wokspace(&self,on_id: &str) -> Result<tempfile::TempDir> {
+    pub fn allocate_wokspace(&self, session_id: &str) -> Result<tempfile::TempDir> {
         let dir = tempfile::Builder::new()
             .prefix(&format!("safeexec {}", session_id))
             .tempdir()
@@ -51,7 +50,7 @@ impl VfsManager {
     
     pub fn bind_mount_output(&self,src: &Path,dst: &Path) -> Result<()>{
         std::fs::create_dir_all(dst).ok();
-        self.bind_mount_rw(src,dst)
+        self.bind_mount_output(src,dst)
     } 
     pub fn pivot_root_into(&self, new_root: &Path) -> Result<()>{
         let put_old = new_root.join(".old_root");
@@ -65,17 +64,54 @@ impl VfsManager {
             None::<&str>,
             MsFlags::MS_BIND | MsFlags::MS_REC,
             None<&str>,
-            ).map_err(|e| SafeExecError::Mount(format!("self-bind-mount failed: {}"),e))?;
-        Mount(
-            None::<&str>,
-            Path::new("/"),
-            None::<&str>,
-            MsFlags::MS_PRIVATE | MsFlags::MS_REC,
+            ).map_err(|e| SafeExecError::MountRRRrmat!("self-bind-mount failed: {}"),e))?;
+    }
+    pub fn setup_proc(&self) -> Result<()>{
+        mount(
+            Some("proc"),
+            Path::new("/proc"),
+            Some("proc"),
+            MsFlags::MS_NOSUID | MsFlags::MS_NOEXEC | MsFlags::MS_NODEV,
             None<&str>,
-            ).map_err(|e| SafeExecError::Mount(format!("make private failed: {}"),e))?;
-        chdir("/").map_err(SafeExecError::Mount(format!("chdir / failed : {}",e)))?;
-        umount2(".old_root", MntFlags::MNT_DETACH).map_err(SafeExecError::Mount(format!("umount2 failed: {}",e))?;
-        std::fs::remove_dir(".old_root").map_err(SafeExecError::Mount(format!("remove_dir failed: {}",e)))?;
-        Ok(())
+            ).map_err(|e|SafeExecError::Mount(format!("failed to mount proc: {}",e)))
+    }
+    pub fn setup_tmpfs(&self) -> Result<()>{
+        mount(
+            Some("tmp"),
+            path::new("/tmp"),
+            Some("tmp"),
+            MsFlags::MS_NODEV | MsFlags::MS_NOSUID,
+            None<&str>,
+            ).map_err(|e|SafeExecError::Mount(format!(("failed to mount tmp: {}",e)))
+    }
+    fn bind_mount_ro(&self,src: &Path,dst: &Path) -> Result<()>{
+        mount(
+            Some(src),
+            dst,
+            None<&str>,
+            MsFlags::MS_BIND | MsFlags::MS_REC,
+            None<&str>,
+            ).map_err(|e|SafeExecError::Mount(format!("bind {} -> {} failed: {}"),src.display(),dst.display(),e)))?;
+
+            mount(
+            None::<&str>,
+            dst,
+            None::<&str>,
+            MsFlags::MS_REMOUNT | MsFlags::MS_BIND | MsFlags::MS_RDONLY | MsFlags::MS_REC,
+            None::<&str>,
+        ).map_err(|e| SafeExecError::Mount(format!(
+            "remount ro {} failed: {}", dst.display(), e
+        )))
+    }
+    fn bind_mount_rw(&self, src: &Path, dst: &Path) -> Result<()> {
+        mount(
+            Some(src),
+            dst,
+            None::<&str>,
+            MsFlags::MS_BIND | MsFlags::MS_REC,
+            None::<&str>,
+        ).map_err(|e| SafeExecError::Mount(format!(
+            "bind mount {} -> {} failed: {}", src.display(), dst.display(), e
+        )))
     }
 }
