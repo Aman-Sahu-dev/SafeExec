@@ -44,3 +44,6 @@ impl NamespaceController {
         Ok(())
     }
 }
+pub fn allocate_clone_stack(size: usize) -> Vec<u8> {
+    vec![0u8; size]
+}
