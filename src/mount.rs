@@ -1,11 +1,7 @@
 use crate::error::{Result, SafeExecError};
-use nix::mount::{MntFlags, MsFlags, mount, umount2};
-use nix::unistd::chdir;
-use std::fmt::Result;
+use nix::mount::{MsFlags, mount};
 use std::os::unix::fs::PermissionsExt;
-use std::path::Component::Prefix;
-use std::path::{self, Path, PathBuf};
-use tempfile::TempDir;
+use std::path::Path;
 
 pub struct VfsManager;
 
@@ -47,62 +43,55 @@ impl VfsManager {
         std::fs::create_dir_all(dst).ok();
         self.bind_mount_ro(src, dst)
     }
-    
-    pub fn bind_mount_output(&self,src: &Path,dst: &Path) -> Result<()>{
+
+    pub fn bind_mount_output(&self, dst: &Path) -> Result<()> {
         std::fs::create_dir_all(dst).ok();
-        self.bind_mount_output(src,dst)
-    } 
-    pub fn pivot_root_into(&self, new_root: &Path) -> Result<()>{
+        Ok(())
+    }
+    pub fn pivot_root_into(&self, new_root: &Path) -> Result<()> {
         let put_old = new_root.join(".old_root");
-        std::fs::create_dir_all(&put_old).map_err(|e| {
-            SafeExecError::Mount(fromat!("failed to create put_old: {}"),e)
-        })?;
+        std::fs::create_dir_all(&put_old)
+            .map_err(|e| SafeExecError::Mount(format!("failed to create put_old: {}", e)))?;
 
         mount(
             Some(new_root),
             new_root,
             None::<&str>,
             MsFlags::MS_BIND | MsFlags::MS_REC,
-            None<&str>,
-            ).map_err(|e| SafeExecError::MountRRRrmat!("self-bind-mount failed: {}"),e))?;
+            None::<&str>,
+        )
+        .map_err(|e| SafeExecError::Mount(format!("self-bind-mount failed: {}", e)))?;
+        Ok(())
     }
-    pub fn setup_proc(&self) -> Result<()>{
-        mount(
-            Some("proc"),
-            Path::new("/proc"),
-            Some("proc"),
-            MsFlags::MS_NOSUID | MsFlags::MS_NOEXEC | MsFlags::MS_NODEV,
-            None<&str>,
-            ).map_err(|e|SafeExecError::Mount(format!("failed to mount proc: {}",e)))
-    }
-    pub fn setup_tmpfs(&self) -> Result<()>{
-        mount(
-            Some("tmp"),
-            path::new("/tmp"),
-            Some("tmp"),
-            MsFlags::MS_NODEV | MsFlags::MS_NOSUID,
-            None<&str>,
-            ).map_err(|e|SafeExecError::Mount(format!(("failed to mount tmp: {}",e)))
-    }
-    fn bind_mount_ro(&self,src: &Path,dst: &Path) -> Result<()>{
+    fn bind_mount_ro(&self, src: &Path, dst: &Path) -> Result<()> {
+        // First: recursive bind mount.
         mount(
             Some(src),
             dst,
-            None<&str>,
+            None::<&str>,
             MsFlags::MS_BIND | MsFlags::MS_REC,
-            None<&str>,
-            ).map_err(|e|SafeExecError::Mount(format!("bind {} -> {} failed: {}"),src.display(),dst.display(),e)))?;
+            None::<&str>,
+        )
+        .map_err(|e| {
+            SafeExecError::Mount(format!(
+                "bind mount {} -> {} failed: {}",
+                src.display(),
+                dst.display(),
+                e
+            ))
+        })?;
 
-            mount(
+        // Second: remount as read-only.
+        mount(
             None::<&str>,
             dst,
             None::<&str>,
             MsFlags::MS_REMOUNT | MsFlags::MS_BIND | MsFlags::MS_RDONLY | MsFlags::MS_REC,
             None::<&str>,
-        ).map_err(|e| SafeExecError::Mount(format!(
-            "remount ro {} failed: {}", dst.display(), e
-        )))
+        )
+        .map_err(|e| SafeExecError::Mount(format!("remount ro {} failed: {}", dst.display(), e)))
     }
+
     fn bind_mount_rw(&self, src: &Path, dst: &Path) -> Result<()> {
         mount(
             Some(src),
@@ -110,8 +99,14 @@ impl VfsManager {
             None::<&str>,
             MsFlags::MS_BIND | MsFlags::MS_REC,
             None::<&str>,
-        ).map_err(|e| SafeExecError::Mount(format!(
-            "bind mount {} -> {} failed: {}", src.display(), dst.display(), e
-        )))
+        )
+        .map_err(|e| {
+            SafeExecError::Mount(format!(
+                "bind mount {} -> {} failed: {}",
+                src.display(),
+                dst.display(),
+                e
+            ))
+        })
     }
 }
