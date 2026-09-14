@@ -55,6 +55,14 @@ impl<'a> TaskLauncher<'a> {
         let vfs = VfsManager::new();
         let workspace = vfs.allocate_wokspace("Phase 4")?;
         let workspace_path = workspace.path().to_path_buf();
-        vfs.setup_minimal_root(&workspace_path);
+        vfs.setup_minimal_root(&workspace_path)?;
+        if let Some(input) = self.input{
+            vfs.bind_mount_into(&input,&workspace_path.join("in"))?;
+        }
+        if let Some(output) = self.output{
+            vfs.bind_mount_output(&output,&workspace_path.join("out"))?;
+        }
+        let binary_cstr = CString::new(self.binary.as_os_str().as_encoded_bytes()).map_err(|_| SafeExecError::InvalidArgument("binary path contain null ".into()))?;
+        let args_cstr: Vec<CString> = //continue
     }
 }

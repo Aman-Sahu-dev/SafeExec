@@ -44,9 +44,9 @@ impl VfsManager {
         self.bind_mount_ro(src, dst)
     }
 
-    pub fn bind_mount_output(&self, dst: &Path) -> Result<()> {
+    pub fn bind_mount_output(&self, src: &Path, dst: &Path) -> Result<()> {
         std::fs::create_dir_all(dst).ok();
-        Ok(())
+        self.bind_mount_rw(src, dst)
     }
     pub fn pivot_root_into(&self, new_root: &Path) -> Result<()> {
         let put_old = new_root.join(".old_root");
