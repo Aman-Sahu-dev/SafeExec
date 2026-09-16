@@ -79,5 +79,61 @@ impl<'a> TaskLauncher<'a> {
 
         let child_barrier = sync.child_view();
         let parent_barrier = sync.parent_view();
+        let child_callback = move || {
+            if let Err(e) = child_barrier.close_parent_descriptors() {
+                eprintln!("[child] close_parent_descriptors failed: {}", e);
+                return 1;
+            }
+
+            if let Err(e) = prctl::set_pdeathsig(Signal::SIGKILL) {
+                eprintln!("[child] prctl(PR_SET_PDEATHSIG) failed: {}", e);
+                return 1;
+            }
+
+            if let Err(e) = unistd::setuid(Uid::from_raw(0)) {
+                eprintln!("[child] setuid(0) failed: {}", e);
+                return 1;
+            }
+            if let Err(e) = unistd::setgid(Gid::from_raw(0)) {
+                eprintln!("[child] setgid(0) failed: {}", e);
+                return 1;
+            }
+
+            if let Err(e) = child_barrier.signal_ready() {
+                eprintln!("[child] signal_ready failed: {}", e);
+                return 1;
+            }
+
+            if let Err(e) = child_barrier.wait_for_parent_continue() {
+                eprintln!("[child] wait_for_parent_continue failed: {}", e);
+                return 1;
+            }
+
+            if let Err(e) = unistd::sethostname(&hostname_cstr) {
+                eprintln!("[child] sethostname failed: {}", e);
+                return 1;
+            }
+
+            let vfs = VfsManager::new();
+            if let Err(e) = vfs.pivot_root_into(&wp) {
+                eprintln!("[child] pivot_root failed: {}", e);
+                return 1;
+            }
+            if let Err(e) = vfs.setup_proc() {
+                eprintln!("[child] setup_proc failed: {}", e);
+                return 1;
+            }
+            if let Err(e) = vfs.setup_tmpfs() {
+                eprintln!("[child] setup_tmpfs failed: {}", e);
+                return 1;
+            }
+
+            if let Err(e) = unistd::execve(&binary_cstr, &args_cstr, &envp) {
+                eprintln!("[child] execve failed: {}", e);
+                return 127;
+            }
+
+            unreachable!("execve should never return on success")
+        };
     }
 }
