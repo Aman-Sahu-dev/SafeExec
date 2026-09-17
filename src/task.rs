@@ -134,6 +134,20 @@ impl<'a> TaskLauncher<'a> {
             }
 
             unreachable!("execve should never return on success")
+            let ns = NamespaceController::new();
+            let child_pid = unsafe { ns.spawn_container_init(flags, &mut stack, child_callback)? };
+
+            parent_barrier.close_child_descriptors()?;
+             parent_barrier.wait_for_child_ready()?;
+
+            ns.write_uid_gid_map(child_pid, getuid().as_raw(), getgid().as_raw())?;
+
+            if let Some(cg) = self.cgroup {
+            cg.attach_pid(child_pid)?;
+            }
+
+            parent_barrier.signal_continue()?;
         };
+
     }
 }
