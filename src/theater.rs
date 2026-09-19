@@ -1,5 +1,3 @@
-use std::path::PathBuf;
-
 use crate::cli::TheaterMode;
 use crate::error::Result;
 use crate::telemetry::TelemetryEvent;
@@ -38,10 +36,10 @@ impl TheatrerEngine {
                 memory_max,
                 pid_max,
             } => {
-                let mem = byte_unit::Byte::from_bytes(*memory_max);
+                let mem = byte_unit::Byte::from_u64(*memory_max);
                 Some(format!(
                     "🛡️ [CGROUP]    The memory cage is locked: {} maximum. Fork-bomb fuse: {} threads.",
-                    mem.get_appropriate_unit(false),
+                    mem.get_appropriate_unit(byte_unit::UnitType::Binary),
                     pid_max
                 ))
             }
@@ -70,12 +68,14 @@ impl TheatrerEngine {
                 c
             )),
             ProcessExited {
-                code: None,
-                signal: Some(s),
+                signal: Some(s), ..
             } => Some(format!(
                 "💀 [EPILOGUE]  The actor was struck down by signal {}.",
                 s
             )),
+            ProcessExited { .. } => {
+                Some("❓ [EPILOGUE]  The actor departed with unknown status.".to_string())
+            }
             CleanupCompleted => Some(
                 "🧹 [CLEANUP]   The temporary world dissolves. Cgroup slice erased.".to_string(),
             ),

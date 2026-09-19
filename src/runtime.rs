@@ -73,7 +73,7 @@ fn parse_duration(s: &str) -> Result<Duration> {
 }
 
 fn parse_memory(s: &str) -> Result<u64> {
-    if let Ok(byte) = byte_unit::Byte::from_str(s) {
+    if let Ok(byte) = byte_unit::Byte::parse_str(s, true) {
         return Ok(byte.as_u64());
     }
 

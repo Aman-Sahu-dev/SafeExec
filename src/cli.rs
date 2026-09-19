@@ -1,50 +1,56 @@
 use clap::{Parser, ValueEnum};
-use std::{default, path::PathBuf};
+use std::path::PathBuf;
 
 #[derive(Parser, Debug)]
 #[command(name = "safeexec")]
 #[command(about = "A lighweight linux container runtime and sandbox")]
 
 pub struct Args {
-    #[ARG(LONG, SHORT = 'E')]
-    PUB EXEC: PATHBUF,
+    #[arg(long, short = 'e')]
+    pub exec: PathBuf,
 
-    #[ARG(LONG,SHORT = 'A',NUMS_ARGS = 0..)]
-    PUB ARGS: VEC<STRING>,
+    #[arg(long, short = 'a', num_args = 0..)]
+    pub args: Vec<String>,
 
-    #[ARG(LONG, DEFAULT_VALUE = "64MB")]
-    PUB MAX_MEMORY: STRING,
+    #[arg(long, default_value = "64MB")]
+    pub max_memory: String,
 
-    #[ARG(LONG, DEFAULT_VALUE = "20")]
-    PUB MAX_PIDS: U64,
+    #[arg(long, default_value = "20")]
+    pub max_pids: u64,
 
-    #[ARG(LONG)]
-    PUB CPU_MAX: OPTION<STRING>,
+    #[arg(long)]
+    pub cpu_max: Option<String>,
 
-    #[ARG(LONG, SHORT = 'T', DEFAULT_VALUE)]
-    PUB TIMEOUT: STRING,
+    #[arg(long, short = 't', default_value = "30s")]
+    pub timeout: String,
 
-    #[ARG(LONG, SHORT = 'I')]
-    PUB INPUT: OPTION<PATHBUF>,
+    #[arg(long, short = 'i')]
+    pub input: Option<PathBuf>,
 
-    #[ARG(LONG, SHORT = 'O')]
-    PUB OUTPUT: OPTION<PATHBUF>,
+    #[arg(long, short = 'o')]
+    pub output: Option<PathBuf>,
 
-    #[ARG(LONG, VALUEENUM, DEFAULT_VALUE = "NARRETIVE")]
-    PUB THEATERMODE: THEATERMODE,
+    #[arg(long, alias = "theatermode", value_enum, default_value = "narrative")]
+    pub theater_mode: TheaterMode,
 
-    #[ARG(LONG)]
-    PUB QUITE_TELEMTRY: BOOL,
+    #[arg(long, alias = "quite_telemtry")]
+    pub quiet_telemetry: bool,
 
-    #[ARG(LONG)]
-    PUB SESSION_ID: OPTION<STRING>,
+    #[arg(long)]
+    pub session_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy, ValueEnum)]
 pub enum TheaterMode {
+    #[value(name = "narrative", alias = "narretive")]
     Narretive,
 
     Technical,
 
     Silent,
+}
+
+impl TheaterMode {
+    #[allow(non_upper_case_globals)]
+    pub const Narrative: Self = Self::Narretive;
 }

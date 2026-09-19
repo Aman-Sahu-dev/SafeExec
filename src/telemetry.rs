@@ -1,5 +1,6 @@
+use crate::error::Result;
 use serde::{Deserialize, Serialize};
-use std::{fmt::Result, time::SystemTime};
+use std::time::SystemTime;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(tag = "event", rename_all = "snake_case")]
@@ -43,7 +44,7 @@ impl TelemetryPipeline {
     pub fn new() -> Self {
         Self
     }
-    pub async fn run(&self) -> Result() {
-        toto!("implement in phase 6")
+    pub async fn run(&self) -> Result<()> {
+        todo!("implement in phase 6")
     }
 }

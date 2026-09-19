@@ -63,6 +63,28 @@ impl VfsManager {
         .map_err(|e| SafeExecError::Mount(format!("self-bind-mount failed: {}", e)))?;
         Ok(())
     }
+
+    pub fn setup_proc(&self) -> Result<()> {
+        mount(
+            Some("proc"),
+            Path::new("/proc"),
+            Some("proc"),
+            MsFlags::MS_NOSUID | MsFlags::MS_NOEXEC | MsFlags::MS_NODEV,
+            None::<&str>,
+        )
+        .map_err(|e| SafeExecError::Mount(format!("failed to mount proc: {}", e)))
+    }
+
+    pub fn setup_tmpfs(&self) -> Result<()> {
+        mount(
+            Some("tmpfs"),
+            Path::new("/tmp"),
+            Some("tmpfs"),
+            MsFlags::MS_NODEV | MsFlags::MS_NOSUID,
+            None::<&str>,
+        )
+        .map_err(|e| SafeExecError::Mount(format!("failed to mount tmp: {}", e)))
+    }
     fn bind_mount_ro(&self, src: &Path, dst: &Path) -> Result<()> {
         // First: recursive bind mount.
         mount(

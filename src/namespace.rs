@@ -35,12 +35,12 @@ impl NamespaceController {
         let gid_path = format!("/proc/{}/gid_map", pid);
 
         std::fs::write(&uid_path, uid_map)
-            .map_err(|e| SafeExecError::Namespace(format!("failed to write uid map: {}", e)));
+            .map_err(|e| SafeExecError::Namespace(format!("failed to write uid map: {}", e)))?;
         let setgroups_path = format!("/proc/{}/setgroups", pid);
         let _ = std::fs::write(setgroups_path, "deny");
 
         std::fs::write(&gid_path, gid_map)
-            .map_err(|e| SafeExecError::Namespace(format!("failed to write gid_map {}", e)));
+            .map_err(|e| SafeExecError::Namespace(format!("failed to write gid_map {}", e)))?;
         Ok(())
     }
 }
